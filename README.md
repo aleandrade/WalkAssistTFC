@@ -1,3 +1,3 @@
 Walk Assist app project
 
-Alexandre Gomes Andrade
+Alexandre Gomes Andrade - Unicamp
