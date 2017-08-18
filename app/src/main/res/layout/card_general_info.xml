@@ -164,6 +164,14 @@
 
             </LinearLayout>
 
+            <TextView
+                android:id="@+id/mod_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="---"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:textStyle="bold" />
+
         </LinearLayout>
 
     </LinearLayout>

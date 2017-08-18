@@ -27,13 +27,13 @@
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- description: [App name] -->
-    <string name="app_name">MDK Sensor</string>
+    <string name="app_name">Walk Assist</string>
     <!-- description: [Settings menu caption] -->
     <string name="action_settings">Settings</string>
     <!-- description: [About menu caption] -->
     <string name="action_about">About</string>
     <!-- description: [Learn more menu caption] -->
-    <string name="mod_external_link">Learn more</string>
+    <string name="mod_external_link">Walk Assist TFC project</string>
     <!-- description: [Developer site menu caption] -->
     <string name="mod_external_dev_portal">Moto Mods™ Developer Portal</string>
     <!-- description: [Source code on Github] -->

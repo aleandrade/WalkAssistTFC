@@ -70,7 +70,7 @@ import lecho.lib.hellocharts.view.LineChartView;
 /**
  * A class to represent main activity.
  */
-public class MainActivity extends Activity implements View.OnClickListener {
+public class MainActivity extends Activity {
     public static final String MOD_UID = "mod_uid";
 
     private static final int RAW_PERMISSION_REQUEST_CODE = 100;
@@ -129,129 +129,45 @@ public class MainActivity extends Activity implements View.OnClickListener {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setActionBar(toolbar);
 
-        LinearLayout dipTitle = (LinearLayout)findViewById(R.id.layout_dip_description_title);
-        dipTitle.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                LinearLayout dipDescription = (LinearLayout)findViewById(R.id.layout_dip_description);
-                ImageView imgExpand = (ImageView)findViewById(R.id.imageview_description_img);
 
-                if (dipDescription.getVisibility() == View.GONE) {
-                    dipDescription.setVisibility(View.VISIBLE);
-                    imgExpand.setImageResource(R.drawable.ic_expand_less);
-                } else {
-                    dipDescription.setVisibility(View.GONE);
-                    imgExpand.setImageResource(R.drawable.ic_expand_more);
-                }
-
-                dipDescription.setPivotY(0);
-                ObjectAnimator.ofFloat(dipDescription, "scaleY", 0f, 1f).setDuration(300).start();
-            }
-        });
-
-        /** Switch button for toggle mod device temperature sensor */
-        Switch switcher = (Switch) findViewById(R.id.sensor_switch);
-        if (switcher != null) {
-            switcher.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    if (null == personality || null == personality.getModDevice()) {
-                        Toast.makeText(MainActivity.this, getString(R.string.sensor_not_available),
-                                Toast.LENGTH_SHORT).show();
-                        buttonView.setChecked(false);
-                        return;
-                    }
-
-                    if (personality.getModDevice().getVendorId() != Constants.VID_DEVELOPER
-                            && !(personality.getModDevice().getVendorId() == Constants.VID_MDK
-                            && personality.getModDevice().getProductId() == Constants.PID_TEMPERATURE)) {
-                        Toast.makeText(MainActivity.this, getString(R.string.sensor_not_available),
-                                Toast.LENGTH_SHORT).show();
-                        buttonView.setChecked(false);
-                        return;
-                    }
-
-                    /** Set interval spinner button status */
-                    Spinner spinner = (Spinner) findViewById(R.id.sensor_interval);
-                    if (spinner != null) {
-                        if (!isChecked && personality != null
-                                && personality.getModDevice() != null
-                                && personality.getModDevice().getVendorId() == Constants.VID_MDK
-                                && personality.getModDevice().getProductId() == Constants.PID_TEMPERATURE) {
-                            spinner.setEnabled(true);
-                        } else {
-                            spinner.setEnabled(false);
-                        }
-                    }
-
-                    /** Write RAW command to toggle mdk temperature sensor on mod device */
-                    if (isChecked) {
-                        String[] values = getResources().getStringArray(R.array.sensor_interval_values);
-                        int interval = Integer.valueOf(values[spinner.getSelectedItemPosition()]);
-                        byte intervalLow = (byte) (interval & 0x00FF);
-                        byte intervalHigh = (byte) (interval >> 8);
-                        byte[] cmd = {Constants.TEMP_RAW_COMMAND_ON, Constants.SENSOR_COMMAND_SIZE,
-                                intervalLow, intervalHigh};
-                        personality.getRaw().executeRaw(cmd);
-
-                        Toast.makeText(MainActivity.this, getString(R.string.sensor_start),
-                                Toast.LENGTH_SHORT).show();
-                    } else {
-                        personality.getRaw().executeRaw(Constants.RAW_CMD_STOP);
-
-                        Toast.makeText(MainActivity.this, getString(R.string.sensor_stop),
-                                Toast.LENGTH_SHORT).show();
-                    }
-
-                    /** Save currently temperature recording status */
-                    SharedPreferences preference = getSharedPreferences("recordingRaw", MODE_PRIVATE);
-                    preference.edit().putBoolean("recordingRaw", isChecked).commit();
-                }
-            });
+        if (null == personality || null == personality.getModDevice()) {
+            Toast.makeText(MainActivity.this, getString(R.string.sensor_not_available),
+                    Toast.LENGTH_SHORT).show();
+            //buttonView.setChecked(false);
+            return;
         }
 
-        /** Prepare chart graph */
-        chart = (LineChartView) findViewById(R.id.air_quality_chart);
-        if (null != chart) {
-            List<PointValue> values = new ArrayList<>();
-            Line line = new Line(values).setColor(getColor(R.color.colorPrimary))
-                    .setCubic(false)
-                    .setHasLines(true)
-                    .setHasLabels(true)
-                    .setHasLabelsOnlyForSelected(true)
-                    .setFilled(false);
-
-            List<Line> lines = new ArrayList<>();
-            lines.add(line);
-            LineChartData data = new LineChartData(lines);
-            data.setAxisYLeft(new Axis().setAutoGenerated(true)
-                    .setName(getString(R.string.y_axis_name))
-                    .setHasLines(true)
-                    .setHasTiltedLabels(false));
-            data.setAxisXBottom(new Axis()
-                    .setName(getString(R.string.x_axis_name))
-                    .setAutoGenerated(true)
-                    .setHasTiltedLabels(false)
-                    .setHasLines(true)
-                    .setHasSeparationLine(false)
-                    .setInside(false));
-            chart.setLineChartData(data);
+        if (personality.getModDevice().getVendorId() != Constants.VID_DEVELOPER
+                && !(personality.getModDevice().getVendorId() == Constants.VID_MDK
+                && personality.getModDevice().getProductId() == Constants.PID_TEMPERATURE)) {
+            Toast.makeText(MainActivity.this, getString(R.string.sensor_not_available),
+                    Toast.LENGTH_SHORT).show();
+            //buttonView.setChecked(false);
+            return;
         }
 
-        TextView textView = (TextView)findViewById(R.id.mod_external_dev_portal);
-        if (textView != null) {
-            textView.setOnClickListener(this);
-        }
+        /** Write RAW command to toggle mdk temperature sensor on mod device */
+        //if (isChecked) {
+            String[] values = getResources().getStringArray(R.array.sensor_interval_values);
+            int interval = Integer.valueOf(0);//CHANGED
+            byte intervalLow = (byte) (interval & 0x00FF);
+            byte intervalHigh = (byte) (interval >> 8);
+            byte[] cmd = {Constants.TEMP_RAW_COMMAND_ON, Constants.SENSOR_COMMAND_SIZE,
+                    intervalLow, intervalHigh};
+            personality.getRaw().executeRaw(cmd);
 
-        textView = (TextView)findViewById(R.id.mod_source_code);
-        if (textView != null) {
-            textView.setOnClickListener(this);
-        }
+            Toast.makeText(MainActivity.this, getString(R.string.sensor_start),
+                    Toast.LENGTH_SHORT).show();
+//        } else {
+//            personality.getRaw().executeRaw(Constants.RAW_CMD_STOP);
+//
+//            Toast.makeText(MainActivity.this, getString(R.string.sensor_stop),
+//                    Toast.LENGTH_SHORT).show();
+//        }
 
-        Button button = (Button)findViewById(R.id.status_clear_history);
-        if (button != null) {
-            button.setOnClickListener(this);
-        }
+        /** Save currently temperature recording status */
+        SharedPreferences preference = getSharedPreferences("recordingRaw", MODE_PRIVATE);
+        //preference.edit().putBoolean("recordingRaw", ).commit();
     }
 
     @Override
@@ -274,11 +190,11 @@ public class MainActivity extends Activity implements View.OnClickListener {
         initPersonality();
 
         /** Restore temperature record status */
-        Switch switcher = (Switch) findViewById(R.id.sensor_switch);
+        /*Switch switcher = (Switch) findViewById(R.id.sensor_switch);
         if (switcher != null) {
             SharedPreferences preference = getSharedPreferences("recordingRaw", MODE_PRIVATE);
             switcher.setChecked(preference.getBoolean("recordingRaw", false));
-        }
+        }*/
     }
 
     @Override
@@ -297,83 +213,18 @@ public class MainActivity extends Activity implements View.OnClickListener {
     /** Clean up MDK Personality interface */
     private void releasePersonality() {
         /** Save currently temperature recording status */
-        Switch switcher = (Switch) findViewById(R.id.sensor_switch);
-        if (switcher.isChecked()) {
-            Toast.makeText(this, getString(R.string.sensor_stop), Toast.LENGTH_SHORT).show();
-        }
+//        Switch switcher = (Switch) findViewById(R.id.sensor_switch);
+//        if (switcher.isChecked()) {
+//            Toast.makeText(this, getString(R.string.sensor_stop), Toast.LENGTH_SHORT).show();
+//        }
         SharedPreferences preference = getSharedPreferences("recordingRaw", MODE_PRIVATE);
         preference.edit().putBoolean("recordingRaw", false).commit();
 
         /** Clean up MDK Personality interface */
-        if (null != personality) {
+        if (personality != null) {
             personality.getRaw().executeRaw(Constants.RAW_CMD_STOP);
             personality.onDestroy();
             personality = null;
-        }
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_about) {
-            /** Get UUID of this mod device */
-            String uid = getString(R.string.na);
-            if (personality != null
-                    && personality.getModDevice() != null
-                    && personality.getModDevice().getUniqueId() != null) {
-                uid = personality.getModDevice().getUniqueId().toString();
-            }
-
-            startActivity(new Intent(this, AboutActivity.class).putExtra(MOD_UID, uid));
-            return true;
-        }
-
-        if (id == R.id.action_policy) {
-            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(Constants.URL_PRIVACY_POLICY)));
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
-    /** Button click event from UI */
-    @Override
-    public void onClick(View v) {
-        if (v == null) {
-            return;
-        }
-
-        switch (v.getId()) {
-            case R.id.mod_external_dev_portal:
-                /** The Developer Portal link is clicked */
-                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(Constants.URL_DEV_PORTAL)));
-                break;
-            case R.id.mod_source_code:
-                /** The Buy Mods link is clicked */
-                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(Constants.URL_SOURCE_CODE)));
-                break;
-            case R.id.status_clear_history:
-                /** The Clear History button is clicked */
-                count = 0;
-                Line line = chart.getLineChartData().getLines().get(0);
-                if (null != line) {
-                    line.getValues().clear();
-                    chart.animationDataUpdate(1);
-                }
-                break;
-            default:
-                Log.i(Constants.TAG, "Alert: Main action not handle.");
-                break;
         }
     }
 
@@ -463,7 +314,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
         /**
          * Set Sensor Description text based on current state
          */
-        TextView tvSensor = (TextView)findViewById(R.id.sensor_text);
+        TextView tvSensor = (TextView)findViewById(R.id.mod_status);
         if (tvSensor != null) {
             if (device == null) {
                 tvSensor.setText(R.string.attach_pcard);
@@ -485,37 +336,17 @@ public class MainActivity extends Activity implements View.OnClickListener {
          * challenge, the toggle button will be enabled. Refer to handler of
          * Constants.TEMP_RAW_COMMAND_CHLGE_RESP in parseResponse().
          */
-        Switch switcher = (Switch) findViewById(R.id.sensor_switch);
-        if (switcher != null) {
-            switcher.setEnabled(false);
-
-            /** Reset Temperature switch button to off if mod detach */
-            if (device == null) {
-                if (switcher.isChecked()) {
-                    switcher.setChecked(false);
-                }
-            }
-        }
-
-        /**
-         * Disable sampling interval spinner button here. If attached mod passed
-         * command challenge, the spinner button will be enabled . Refer to handler
-         * of Constants.TEMP_RAW_COMMAND_CHLGE_RESP in parseResponse().
-         */
-        Spinner spinner = (Spinner) findViewById(R.id.sensor_interval);
-        if (spinner != null ) {
-            spinner.setEnabled(false);
-        }
-
-        /**
-         * Disable clear sampling history button here. If attached mod passed
-         * command challenge, the button will be enabled . Refer to handler
-         * of Constants.TEMP_RAW_COMMAND_CHLGE_RESP in parseResponse().
-         */
-        Button bClear = (Button) findViewById(R.id.status_clear_history);
-        if (bClear != null ) {
-            bClear.setEnabled(false);
-        }
+//        Switch switcher = (Switch) findViewById(R.id.sensor_switch);
+//        if (switcher != null) {
+//            switcher.setEnabled(false);
+//
+//            /** Reset Temperature switch button to off if mod detach */
+//            if (device == null) {
+//                if (switcher.isChecked()) {
+//                    switcher.setChecked(false);
+//                }
+//            }
+//        }
     }
 
     /** Check current mod whether in developer mode */
@@ -673,72 +504,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
                 viewPort.bottom = minTop;  //min value
                 chart.setMaximumViewport(viewPort);
                 chart.setCurrentViewport(viewPort);
-            }
-        } else if (cmd == Constants.TEMP_RAW_COMMAND_CHALLENGE) {
-            /** Got CHALLENGE command from personality board */
-
-            /** Checking the size of payload before parse it to ensure sufficient bytes. */
-            if (payload == null
-                    || payload.length != size
-                    || payload.length != Constants.CMD_CHALLENGE_SIZE) {
-                return;
-            }
-
-            byte[] resp = Constants.getAESECBDecryptor(Constants.AES_ECB_KEY, payload);
-            if (resp != null) {
-                /** Got decoded CHALLENGE payload */
-                ByteBuffer buffer = ByteBuffer.wrap(resp);
-                buffer.order(ByteOrder.LITTLE_ENDIAN); // lsb -> msb
-                long littleLong = buffer.getLong();
-                littleLong += Constants.CHALLENGE_ADDATION;
-
-                ByteBuffer buf = ByteBuffer.allocate(Long.SIZE / Byte.SIZE).order(ByteOrder.LITTLE_ENDIAN);
-                buf.putLong(littleLong);
-                byte[] respData = buf.array();
-
-                /** Send challenge response back to mod device */
-                byte[] aes = Constants.getAESECBEncryptor(Constants.AES_ECB_KEY, respData);
-                if (aes != null) {
-                    byte[] challenge = new byte[aes.length + 2];
-                    challenge[0] = Constants.TEMP_RAW_COMMAND_CHLGE_RESP;
-                    challenge[1] = (byte) aes.length;
-                    System.arraycopy(aes, 0, challenge, 2, aes.length);
-                    personality.getRaw().executeRaw(challenge);
-                } else {
-                    Log.e(Constants.TAG, "AES encrypt failed.");
-                }
-            } else {
-                Log.e(Constants.TAG, "AES decrypt failed.");
-            }
-        } else if (cmd == Constants.TEMP_RAW_COMMAND_CHLGE_RESP) {
-            /** Get challenge command response */
-
-            /** Checking the size of payload before parse it to ensure sufficient bytes. */
-            if (payload == null
-                    || payload.length != size
-                    || payload.length != Constants.CMD_CHLGE_RESP_SIZE) {
-                return;
-            }
-
-            /**
-             * Check first byte, response from MDK Sensor Card shall be 0
-             * if challenge passed
-             */
-            boolean challengePassed = payload[Constants.CMD_CHLGE_RESP_OFFSET] == 0;
-
-            Switch switcher = (Switch) findViewById(R.id.sensor_switch);
-            if (switcher != null) {
-                switcher.setEnabled(challengePassed);
-            }
-
-            Spinner spinner = (Spinner) findViewById(R.id.sensor_interval);
-            if (spinner != null ) {
-                spinner.setEnabled(challengePassed);
-            }
-
-            Button bClear = (Button) findViewById(R.id.status_clear_history);
-            if (bClear != null ) {
-                bClear.setEnabled(challengePassed);
             }
         }
     }

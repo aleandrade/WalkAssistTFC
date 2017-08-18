@@ -72,13 +72,12 @@
                 android:background="?android:dividerHorizontal" />
 
             <TextView
-                android:id="@+id/mod_external_dev_portal"
+                android:id="@+id/alexandre"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:clickable="true"
                 android:paddingTop="@dimen/widgets_vertical_margin"
-                android:text="@string/mod_external_dev_portal"
-                android:textColor="@color/colorPrimary" />
+                android:text="Alexandre Gomes Andrade"/>
 
             <TextView
                 android:id="@+id/mod_source_code"
@@ -86,8 +85,7 @@
                 android:layout_height="wrap_content"
                 android:clickable="true"
                 android:paddingTop="@dimen/widgets_vertical_margin"
-                android:text="@string/mod_source_code"
-                android:textColor="@color/colorPrimary" />
+                android:text="Pedro Kenji Ohnuma Honda"/>
 
         </LinearLayout>
 
