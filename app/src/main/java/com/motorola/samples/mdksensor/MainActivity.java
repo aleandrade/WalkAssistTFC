@@ -28,20 +28,24 @@
 
 package com.motorola.samples.mdksensor;
 
+import android.Manifest;
 import android.animation.ObjectAnimator;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -74,6 +78,8 @@ public class MainActivity extends Activity {
     public static final String MOD_UID = "mod_uid";
 
     private static final int RAW_PERMISSION_REQUEST_CODE = 100;
+    private static final int RC_VIBRATE = 010;
+
 
     /**
      * Instance of MDK Personality Card interface
@@ -88,6 +94,16 @@ public class MainActivity extends Activity {
     private static float minTop = 70f;
     private LineChartView chart;
     private Viewport viewPort;
+
+    private boolean vibrate = false;
+
+    TextView display;
+
+    /**
+     * Commands
+     */
+    public static byte[] RAW_CMD_ADC_OFF = {0x00,0x00,0x00};
+    public static byte[] RAW_CMD_ADC_ON = {0x00,0x00,0x01};
 
     /** Handler for events from mod device */
     private Handler handler = new Handler() {
@@ -126,14 +142,47 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setActionBar(toolbar);
 
+        VibrationAssist.setPreviousValue(0);
+        display = (TextView) findViewById(R.id.display);
 
-        if (null == personality || null == personality.getModDevice()) {
+        final Button bttnADC = (Button)findViewById(R.id.bttnADC);
+        bttnADC.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                byte[] CollectData = {0x05};
+                personality.getRaw().executeRaw(CollectData);
+            }
+        });
+
+        final Button bttnVibration = (Button)findViewById(R.id.bttnVibration);
+        bttnVibration.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String onOff = bttnVibration.getText().toString();
+                if(onOff.equals("Vibration OFF")) {
+                    vibrate = true;
+                    bttnVibration.setText("Vibration ON");
+                    bttnVibration.setBackgroundColor(Color.parseColor("#5CC0A0"));
+                    VibrationAssist.vibrateProximity(100, getApplicationContext());
+                } else {
+                    vibrate = false;
+                    bttnVibration.setText("Vibration OFF");
+                    bttnVibration.setBackgroundColor(Color.parseColor("#FFFF4444"));
+                    VibrationAssist.cancelVibration(getApplicationContext());
+                }
+            }
+        });
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.VIBRATE) != PackageManager
+                .PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.VIBRATE},
+                    RC_VIBRATE);
+        }
+
+        if (personality == null || personality.getModDevice() == null) {
             Toast.makeText(MainActivity.this, getString(R.string.sensor_not_available),
                     Toast.LENGTH_SHORT).show();
-            //buttonView.setChecked(false);
             return;
         }
 
@@ -142,28 +191,27 @@ public class MainActivity extends Activity {
                 && personality.getModDevice().getProductId() == Constants.PID_TEMPERATURE)) {
             Toast.makeText(MainActivity.this, getString(R.string.sensor_not_available),
                     Toast.LENGTH_SHORT).show();
-            //buttonView.setChecked(false);
             return;
         }
 
-        /** Write RAW command to toggle mdk temperature sensor on mod device */
-        //if (isChecked) {
-            String[] values = getResources().getStringArray(R.array.sensor_interval_values);
-            int interval = Integer.valueOf(0);//CHANGED
-            byte intervalLow = (byte) (interval & 0x00FF);
-            byte intervalHigh = (byte) (interval >> 8);
-            byte[] cmd = {Constants.TEMP_RAW_COMMAND_ON, Constants.SENSOR_COMMAND_SIZE,
-                    intervalLow, intervalHigh};
-            personality.getRaw().executeRaw(cmd);
-
-            Toast.makeText(MainActivity.this, getString(R.string.sensor_start),
-                    Toast.LENGTH_SHORT).show();
-//        } else {
-//            personality.getRaw().executeRaw(Constants.RAW_CMD_STOP);
-//
-//            Toast.makeText(MainActivity.this, getString(R.string.sensor_stop),
-//                    Toast.LENGTH_SHORT).show();
-//        }
+        CheckBox autoCollect = (CheckBox)findViewById(R.id.autoCollect);
+        autoCollect.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener(){
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked){
+                    bttnADC.setEnabled(false);
+                    bttnADC.setBackgroundColor(0xFF222222);
+                    bttnADC.setTextColor(0xFF666666);
+                    personality.getRaw().executeRaw(RAW_CMD_ADC_ON);
+                } else {
+                    VibrationAssist.cancelVibration(getApplicationContext());
+                    bttnADC.setEnabled(true);
+                    bttnADC.setBackgroundColor(0xFF5CC0A0);
+                    bttnADC.setTextColor(0xFFFFFFFF);
+                    personality.getRaw().executeRaw(RAW_CMD_ADC_OFF);
+                }
+            }
+        });
 
         /** Save currently temperature recording status */
         SharedPreferences preference = getSharedPreferences("recordingRaw", MODE_PRIVATE);
@@ -173,7 +221,6 @@ public class MainActivity extends Activity {
     @Override
     public void onDestroy() {
         super.onDestroy();
-
         releasePersonality();
     }
 
@@ -330,23 +377,6 @@ public class MainActivity extends Activity {
                 tvSensor.setText(getString(R.string.attach_pcard));
             }
         }
-
-        /**
-         * Disable sampling toggle button here. If attached mod passed command
-         * challenge, the toggle button will be enabled. Refer to handler of
-         * Constants.TEMP_RAW_COMMAND_CHLGE_RESP in parseResponse().
-         */
-//        Switch switcher = (Switch) findViewById(R.id.sensor_switch);
-//        if (switcher != null) {
-//            switcher.setEnabled(false);
-//
-//            /** Reset Temperature switch button to off if mod detach */
-//            if (device == null) {
-//                if (switcher.isChecked()) {
-//                    switcher.setChecked(false);
-//                }
-//            }
-//        }
     }
 
     /** Check current mod whether in developer mode */
@@ -366,19 +396,17 @@ public class MainActivity extends Activity {
 
     /** Got data from mod device RAW I/O */
     public void onRawData(byte[] buffer, int length) {
-        /** Parse raw data to header and payload */
-        int cmd = buffer[Constants.CMD_OFFSET] & ~Constants.TEMP_RAW_COMMAND_RESP_MASK & 0xFF;
-        int payloadLength = buffer[Constants.SIZE_OFFSET];
-
-        /** Checking the size of buffer we got to ensure sufficient bytes */
-        if (payloadLength + Constants.CMD_LENGTH + Constants.SIZE_LENGTH != length) {
-            return;
+        if (length == 2){
+            byte[] bytes = { 0x00,0x00,buffer[1],buffer[0]};
+            ByteBuffer wrapped = ByteBuffer.wrap(bytes);
+            int integer = wrapped.getInt();
+            if(vibrate){
+                VibrationAssist.vibrateProximity(integer, getApplicationContext());
+            } else {
+                VibrationAssist.cancelVibration(getApplicationContext());
+            }
+            display.setText(Integer.toString(integer) + " cm");
         }
-
-        /** Parser payload data */
-        byte[] payload = new byte[payloadLength];
-        System.arraycopy(buffer, Constants.PAYLOAD_OFFSET, payload, 0, payloadLength);
-        parseResponse(cmd, payloadLength, payload);
     }
 
     /** RAW I/O of attached mod device is ready to use */
@@ -417,12 +445,20 @@ public class MainActivity extends Activity {
                     /** Permission grant, try to check RAW I/O of mod device */
                     personality.getRaw().checkRawInterface();
                 }
-            } else {
+            }  else if (requestCode == RC_VIBRATE){
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    //do nothing
+                } else {
+                    Toast toast = Toast.makeText(this, "Vibrate permission is needed!", Toast.LENGTH_LONG);
+                    toast.show();
+                }
+            }
+        } else {
                 // TODO: user declined for RAW accessing permission.
                 // You may need pop up a description dialog or other prompts to explain
                 // the app cannot work without the permission granted.
-            }
         }
+
     }
 
     /** Parse the data from mod device */

@@ -55,6 +55,7 @@
     -->
     <uses-permission android:name="com.motorola.mod.permission.MOD_ACCESS_INFO" />
     <uses-permission android:name="com.motorola.mod.permission.RAW_PROTOCOL" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <supports-screens android:xlargeScreens="true"/>
 

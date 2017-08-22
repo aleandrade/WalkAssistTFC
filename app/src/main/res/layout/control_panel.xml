@@ -62,10 +62,10 @@
         <Button
             android:id="@+id/bttnVibration"
             android:layout_width="match_parent"
-            android:layout_height="153dp"
+            android:layout_height="130dp"
             android:layout_marginTop="10dp"
             android:background="@color/mod_mismatch"
-            android:text="vibration OFF"
+            android:text="Vibration OFF"
             android:textColor="#FFFFFF"/>
 
     </LinearLayout>
