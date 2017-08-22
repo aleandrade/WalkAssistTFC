@@ -115,7 +115,7 @@
     <!-- description: [Mod service information] -->
     <string name="about_service">Moto Mods Platform Version: <xliff:g id="main_version">%1$d</xliff:g>.<xliff:g id="minor_version">%2$d</xliff:g>\nMoto Mods SDK Version: <xliff:g id="main_version">%3$d</xliff:g>.<xliff:g id="minior_version">%4$d</xliff:g>\n<xliff:g id="mod_service_status">%5$s</xliff:g></string>
 
-    <string name="sensor_not_available">Moto Mods Sensor Card not available.</string>
+    <string name="sensor_not_available">Walk Assist Mod not attached</string>
     <!-- description: [Temperature caption] -->
     <string name="sensor_data">Moto Mods Sensor</string>
     <!-- description: [Sample value catching interval caption] -->

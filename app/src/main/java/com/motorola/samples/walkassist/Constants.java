@@ -26,7 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package com.motorola.samples.mdksensor;
+package com.motorola.samples.walkassist;
 
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
@@ -56,6 +56,7 @@ public class Constants {
 
     public static final int PID_DEVELOPER = 0x00000001;
     public static final int PID_TEMPERATURE = 0x00010503;
+    public static final int PID_WALKASSIST = 0x11111111;
 
     /**
      * Command  is [cmd ID(1 byte)] [size of payload(1byte)] [payload]

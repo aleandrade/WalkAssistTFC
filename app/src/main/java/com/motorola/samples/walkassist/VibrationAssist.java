@@ -1,4 +1,4 @@
-package com.motorola.samples.mdksensor;
+package com.motorola.samples.walkassist;
 
 import android.content.Context;
 import android.os.Vibrator;

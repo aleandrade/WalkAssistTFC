@@ -26,48 +26,31 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package com.motorola.samples.mdksensor;
+package com.motorola.samples.walkassist;
 
 import android.Manifest;
-import android.animation.ObjectAnimator;
 import android.app.Activity;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.Spinner;
-import android.widget.Switch;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.Toolbar;
 
 import com.motorola.mod.ModDevice;
 import com.motorola.mod.ModManager;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.ArrayList;
-import java.util.List;
 
-import lecho.lib.hellocharts.model.Axis;
-import lecho.lib.hellocharts.model.Line;
-import lecho.lib.hellocharts.model.LineChartData;
-import lecho.lib.hellocharts.model.PointValue;
 import lecho.lib.hellocharts.model.Viewport;
 import lecho.lib.hellocharts.view.LineChartView;
 
@@ -186,11 +169,12 @@ public class MainActivity extends Activity {
             return;
         }
 
+        // PID_WALKASSIST, VER NUMERO!!!!!!!!!1111ONZE!!!!
         if (personality.getModDevice().getVendorId() != Constants.VID_DEVELOPER
                 && !(personality.getModDevice().getVendorId() == Constants.VID_MDK
-                && personality.getModDevice().getProductId() == Constants.PID_TEMPERATURE)) {
+                && personality.getModDevice().getProductId() == Constants.PID_WALKASSIST)) {
             Toast.makeText(MainActivity.this, getString(R.string.sensor_not_available),
-                    Toast.LENGTH_SHORT).show();
+                    Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -286,14 +270,7 @@ public class MainActivity extends Activity {
         if (null != tvName) {
             if (null != device) {
                 tvName.setText(device.getProductString());
-
-                if ((device.getVendorId() == Constants.VID_MDK
-                        && device.getProductId() == Constants.PID_TEMPERATURE)
-                        || device.getVendorId() == Constants.VID_DEVELOPER) {
-                    tvName.setTextColor(getColor(R.color.mod_match));
-                } else {
-                    tvName.setTextColor(getColor(R.color.mod_mismatch));
-                }
+                tvName.setTextColor(getColor(R.color.mod_match));
             } else {
                 tvName.setText(getString(R.string.na));
                 tvName.setTextColor(getColor(R.color.mod_na));
@@ -368,11 +345,13 @@ public class MainActivity extends Activity {
             } else if (device.getVendorId() == Constants.VID_DEVELOPER) {
                 tvSensor.setText(R.string.sensor_description);
             } else if (device.getVendorId() == Constants.VID_MDK) {
-                if (device.getProductId() == Constants.PID_TEMPERATURE) {
+                if (device.getProductId() == Constants.PID_WALKASSIST) {
                     tvSensor.setText(R.string.sensor_description);
                 } else {
                     tvSensor.setText(R.string.mdk_switch);
                 }
+            } else if(device.getVendorId() == 0x00000128) {
+                tvSensor.setText("\nMod adds a camera with optical zoom to the phone");
             } else {
                 tvSensor.setText(getString(R.string.attach_pcard));
             }
@@ -459,88 +438,5 @@ public class MainActivity extends Activity {
                 // the app cannot work without the permission granted.
         }
 
-    }
-
-    /** Parse the data from mod device */
-    private void parseResponse(int cmd, int size, byte[] payload) {
-        if (cmd == Constants.TEMP_RAW_COMMAND_INFO) {
-            /** Got information data from personality board */
-
-            /**
-             * Checking the size of payload before parse it to ensure sufficient bytes.
-             * Payload array shall at least include the command head data, and exactly
-             * same as expected size.
-             */
-            if (payload == null
-                    || payload.length != size
-                    || payload.length < Constants.CMD_INFO_HEAD_SIZE) {
-                return;
-            }
-
-            int version = payload[Constants.CMD_INFO_VERSION_OFFSET];
-            int reserved = payload[Constants.CMD_INFO_RESERVED_OFFSET];
-            int latencyLow = payload[Constants.CMD_INFO_LATENCYLOW_OFFSET] & 0xFF;
-            int latencyHigh = payload[Constants.CMD_INFO_LATENCYHIGH_OFFSET] & 0xFF;
-            int max_latency = latencyHigh << 8 | latencyLow;
-
-            StringBuilder name = new StringBuilder();
-            for (int i = Constants.CMD_INFO_NAME_OFFSET; i < size - Constants.CMD_INFO_HEAD_SIZE; i++) {
-                if (payload[i] != 0) {
-                    name.append((char) payload[i]);
-                } else {
-                    break;
-                }
-            }
-            Log.i(Constants.TAG, "command: " + cmd
-                    + " size: " + size
-                    + " version: " + version
-                    + " reserved: " + reserved
-                    + " name: " + name.toString()
-                    + " latency: " + max_latency);
-        } else if (cmd == Constants.TEMP_RAW_COMMAND_DATA) {
-            /** Got sensor data from personality board */
-
-            /** Checking the size of payload before parse it to ensure sufficient bytes. */
-            if (payload == null
-                    || payload.length != size
-                    || payload.length != Constants.CMD_DATA_SIZE) {
-                return;
-            }
-
-            int dataLow = payload[Constants.CMD_DATA_LOWDATA_OFFSET] & 0xFF;
-            int dataHigh = payload[Constants.CMD_DATA_HIGHDATA_OFFSET] & 0xFF;
-
-            /** The raw temperature sensor data */
-            int data = dataHigh << 8 | dataLow;
-
-            /** The temperature */
-            double temp = ((0 - 0.03) * data) + 128;
-
-            /** Draw temperature value to line chart */
-            count++;
-            Line line = chart.getLineChartData().getLines().get(0);
-            if (null != line) {
-                if (count > Constants.MAX_SAMPLING_SUM
-                        && line.getValues() != null
-                        && line.getValues().size() > 0) {
-                    line.getValues().remove(0);
-                }
-
-                line.getValues().add(new PointValue(count, (float) temp));
-                chart.animationDataUpdate(1);
-
-                if (temp * 1.01f > maxTop) {
-                    maxTop = (float) temp * 1.01f;
-                }
-                if (temp * 0.99f < minTop) {
-                    minTop = (float) temp * 0.99f;
-                }
-                viewPort = chart.getMaximumViewport();
-                viewPort.top = maxTop; //max value
-                viewPort.bottom = minTop;  //min value
-                chart.setMaximumViewport(viewPort);
-                chart.setCurrentViewport(viewPort);
-            }
-        }
     }
 }

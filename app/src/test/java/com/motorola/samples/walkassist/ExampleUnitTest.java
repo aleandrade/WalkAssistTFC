@@ -26,7 +26,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package com.motorola.samples.mdksensor;
+package com.motorola.samples.walkassist;
 
 import org.junit.Test;
 

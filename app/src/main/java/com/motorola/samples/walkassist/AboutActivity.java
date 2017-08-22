@@ -26,12 +26,11 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package com.motorola.samples.mdksensor;
+package com.motorola.samples.walkassist;
 
 import android.app.Activity;
 import android.os.Bundle;
 import android.text.Html;
-import android.text.method.LinkMovementMethod;
 import android.view.MenuItem;
 import android.widget.TextView;
 import android.widget.Toolbar;
