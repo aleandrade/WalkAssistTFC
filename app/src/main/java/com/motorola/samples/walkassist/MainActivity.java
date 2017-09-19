@@ -30,6 +30,8 @@ package com.motorola.samples.walkassist;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -37,7 +39,11 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.CheckBox;
@@ -50,6 +56,7 @@ import com.motorola.mod.ModDevice;
 import com.motorola.mod.ModManager;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 
 import lecho.lib.hellocharts.model.Viewport;
 import lecho.lib.hellocharts.view.LineChartView;
@@ -57,12 +64,11 @@ import lecho.lib.hellocharts.view.LineChartView;
 /**
  * A class to represent main activity.
  */
-public class MainActivity extends Activity {
+public class MainActivity extends Activity{
     public static final String MOD_UID = "mod_uid";
 
     private static final int RAW_PERMISSION_REQUEST_CODE = 100;
     private static final int RC_VIBRATE = 010;
-
 
     /**
      * Instance of MDK Personality Card interface
@@ -77,10 +83,20 @@ public class MainActivity extends Activity {
     private static float minTop = 70f;
     private LineChartView chart;
     private Viewport viewPort;
+    private static final int RESULT_SPEECH = 1;
+    private static final int REQUEST_MICROPHONE = 2;
 
     private boolean vibrate = false;
 
     TextView display;
+    Button bttnVibration;
+    private SpeechRecognizer speechRecognizer;
+
+    public int TOGGLE_ON = 0;
+    public int TOGGLE_OFF = 1;
+    public int TOGGLE_ANY = 2;
+
+    public boolean recognized = false;
 
     /**
      * Commands
@@ -126,8 +142,35 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        if (ContextCompat.checkSelfPermission(getApplicationContext(),
+                Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.RECORD_AUDIO},
+                    REQUEST_MICROPHONE);
+
+        }
+
         VibrationAssist.setPreviousValue(0);
         display = (TextView) findViewById(R.id.display);
+
+        final Intent recognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        recognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        recognizerIntent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE,"voice.recognition.test");
+        recognizerIntent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+
+        recognizerIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,5);
+
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
+        speechRecognizer.setRecognitionListener(new listener());
+
+        final Button bttnVoice = (Button)findViewById(R.id.bttnVoice);
+        bttnVoice.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                speechRecognizer.startListening(recognizerIntent);
+            }
+        });
 
         final Button bttnADC = (Button)findViewById(R.id.bttnADC);
         bttnADC.setOnClickListener(new View.OnClickListener() {
@@ -138,22 +181,11 @@ public class MainActivity extends Activity {
             }
         });
 
-        final Button bttnVibration = (Button)findViewById(R.id.bttnVibration);
+        bttnVibration = (Button)findViewById(R.id.bttnVibration);
         bttnVibration.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String onOff = bttnVibration.getText().toString();
-                if(onOff.equals("Vibration OFF")) {
-                    vibrate = true;
-                    bttnVibration.setText("Vibration ON");
-                    bttnVibration.setBackgroundColor(Color.parseColor("#5CC0A0"));
-                    VibrationAssist.vibrateProximity(100, getApplicationContext());
-                } else {
-                    vibrate = false;
-                    bttnVibration.setText("Vibration OFF");
-                    bttnVibration.setBackgroundColor(Color.parseColor("#FFFF4444"));
-                    VibrationAssist.cancelVibration(getApplicationContext());
-                }
+                toggleVibration(TOGGLE_ANY);
             }
         });
 
@@ -231,6 +263,21 @@ public class MainActivity extends Activity {
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
+    }
+
+    public void toggleVibration(int option){
+        String onOff = bttnVibration.getText().toString();
+        if(onOff.equals("Vibration OFF") && option != TOGGLE_OFF) {
+            vibrate = true;
+            bttnVibration.setText("Vibration ON");
+            bttnVibration.setBackgroundColor(Color.parseColor("#5CC0A0"));
+            VibrationAssist.vibrateProximity(100, getApplicationContext());
+        } else if(option != TOGGLE_ON){
+            vibrate = false;
+            bttnVibration.setText("Vibration OFF");
+            bttnVibration.setBackgroundColor(Color.parseColor("#FFFF4444"));
+            VibrationAssist.cancelVibration(getApplicationContext());
+        }
     }
 
     /** Initial MDK Personality interface */
@@ -438,5 +485,69 @@ public class MainActivity extends Activity {
                 // the app cannot work without the permission granted.
         }
 
+    }
+
+    public void compareText(String speechRecognized){
+        if(speechRecognized.contains("ligar vibração") || speechRecognized.contains("liga vibração")){
+            toggleVibration(TOGGLE_ON);
+            recognized = true;
+        } else if(speechRecognized.contains("desligar vibração") || speechRecognized.contains("desliga vibração")){
+            toggleVibration(TOGGLE_OFF);
+            recognized = false;
+        }
+    }
+
+    class listener implements RecognitionListener
+    {
+        public void onReadyForSpeech(Bundle params)
+        {
+        }
+        public void onBeginningOfSpeech()
+        {
+        }
+        public void onRmsChanged(float rmsdB)
+        {
+        }
+        public void onBufferReceived(byte[] buffer)
+        {
+        }
+        public void onEndOfSpeech()
+        {
+        }
+        public void onError(int error)
+        {
+            String message = "";
+            if(error == SpeechRecognizer.ERROR_AUDIO)                           message = "audio";
+            else if(error == SpeechRecognizer.ERROR_CLIENT)                     message = "client";
+            else if(error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS)   message = "insufficient permissions";
+            else if(error == SpeechRecognizer.ERROR_NETWORK)                    message = "network";
+            else if(error == SpeechRecognizer.ERROR_NETWORK_TIMEOUT)            message = "network timeout";
+            else if(error == SpeechRecognizer.ERROR_NO_MATCH)                   message = "no match found";
+            else if(error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY)            message = "recognizer busy";
+            else if(error == SpeechRecognizer.ERROR_SERVER)                     message = "server";
+            else if(error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT)             message = "speech timeout";
+            display.setText(message);
+        }
+        public void onResults(Bundle results)
+        {
+            String str = new String();
+            ArrayList data = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+            for (int i = 0; i < data.size(); i++)
+            {
+                str += data.get(i);
+            }
+            display.setText(str);
+            recognized = false;
+        }
+        public void onPartialResults(Bundle partialResults) {
+            ArrayList data = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+            String word = (String) data.get(data.size() - 1);
+            if(!word.equals("") && recognized == false){
+                compareText(word.toLowerCase());
+            }
+        }
+        public void onEvent(int eventType, Bundle params)
+        {
+        }
     }
 }
