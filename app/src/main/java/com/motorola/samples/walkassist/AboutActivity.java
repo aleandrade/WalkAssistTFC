@@ -59,7 +59,7 @@ public class AboutActivity extends Activity {
         int code = BuildConfig.VERSION_CODE;
         String uid = getString(R.string.na);
         if (getIntent() != null) {
-            uid = getIntent().getStringExtra(MainActivity.MOD_UID);
+            uid = getIntent().getStringExtra(DebugActivity.MOD_UID);
         }
 
         int required = getResources().getInteger(R.integer.moto_mod_services_version) / 1000;

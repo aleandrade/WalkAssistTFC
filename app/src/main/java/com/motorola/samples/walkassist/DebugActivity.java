@@ -30,12 +30,13 @@ package com.motorola.samples.walkassist;
 
 import android.Manifest;
 import android.app.Activity;
-import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -64,7 +65,7 @@ import lecho.lib.hellocharts.view.LineChartView;
 /**
  * A class to represent main activity.
  */
-public class MainActivity extends Activity{
+public class DebugActivity extends Activity{
     public static final String MOD_UID = "mod_uid";
 
     private static final int RAW_PERMISSION_REQUEST_CODE = 100;
@@ -90,13 +91,12 @@ public class MainActivity extends Activity{
 
     TextView display;
     Button bttnVibration;
+    Button bttnVoice;
     private SpeechRecognizer speechRecognizer;
 
     public int TOGGLE_ON = 0;
     public int TOGGLE_OFF = 1;
     public int TOGGLE_ANY = 2;
-
-    public boolean recognized = false;
 
     /**
      * Commands
@@ -131,7 +131,7 @@ public class MainActivity extends Activity{
                     /** Request grant RAW_PROTOCOL permission */
                     onRequestRawPermission();
                 default:
-                    Log.i(Constants.TAG, "MainActivity - Un-handle events: " + msg.what);
+                    Log.i(Constants.TAG, "DebugActivity - Un-handle events: " + msg.what);
                     break;
             }
         }
@@ -141,15 +141,6 @@ public class MainActivity extends Activity{
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        if (ContextCompat.checkSelfPermission(getApplicationContext(),
-                Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.RECORD_AUDIO},
-                    REQUEST_MICROPHONE);
-
-        }
 
         VibrationAssist.setPreviousValue(0);
         display = (TextView) findViewById(R.id.display);
@@ -164,11 +155,17 @@ public class MainActivity extends Activity{
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
         speechRecognizer.setRecognitionListener(new listener());
 
-        final Button bttnVoice = (Button)findViewById(R.id.bttnVoice);
+        bttnVoice = (Button)findViewById(R.id.bttnVoice);
         bttnVoice.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                speechRecognizer.startListening(recognizerIntent);
+                Drawable background = bttnVoice.getBackground();
+                if(((ColorDrawable)background).getColor() == Color.parseColor("#00ff00")){
+                    speechRecognizer.stopListening();
+                    bttnVoice.setBackgroundColor(Color.parseColor("#000000"));
+                } else {
+                    speechRecognizer.startListening(recognizerIntent);
+                }
             }
         });
 
@@ -196,7 +193,7 @@ public class MainActivity extends Activity{
         }
 
         if (personality == null || personality.getModDevice() == null) {
-            Toast.makeText(MainActivity.this, getString(R.string.sensor_not_available),
+            Toast.makeText(DebugActivity.this, getString(R.string.sensor_not_available),
                     Toast.LENGTH_SHORT).show();
             return;
         }
@@ -205,7 +202,7 @@ public class MainActivity extends Activity{
         if (personality.getModDevice().getVendorId() != Constants.VID_DEVELOPER
                 && !(personality.getModDevice().getVendorId() == Constants.VID_MDK
                 && personality.getModDevice().getProductId() == Constants.PID_WALKASSIST)) {
-            Toast.makeText(MainActivity.this, getString(R.string.sensor_not_available),
+            Toast.makeText(DebugActivity.this, getString(R.string.sensor_not_available),
                     Toast.LENGTH_LONG).show();
             return;
         }
@@ -488,12 +485,18 @@ public class MainActivity extends Activity{
     }
 
     public void compareText(String speechRecognized){
-        if(speechRecognized.contains("ligar vibração") || speechRecognized.contains("liga vibração")){
+        if(!speechRecognized.contains("desligar") && speechRecognized.contains("ligar vibração") || speechRecognized.contains("liga vibração")){
             toggleVibration(TOGGLE_ON);
-            recognized = true;
+            speechRecognizer.stopListening();
+            bttnVoice.setBackgroundColor(Color.parseColor("#000000"));
         } else if(speechRecognized.contains("desligar vibração") || speechRecognized.contains("desliga vibração")){
             toggleVibration(TOGGLE_OFF);
-            recognized = false;
+            speechRecognizer.stopListening();
+            bttnVoice.setBackgroundColor(Color.parseColor("#000000"));
+        } else if(speechRecognized.contains("modo auxílio")){
+            toggleVibration(TOGGLE_OFF);
+            speechRecognizer.stopListening();
+            startActivity(new Intent(this, BlindActivity.class));
         }
     }
 
@@ -504,6 +507,7 @@ public class MainActivity extends Activity{
         }
         public void onBeginningOfSpeech()
         {
+            bttnVoice.setBackgroundColor(Color.parseColor("#00ff00"));
         }
         public void onRmsChanged(float rmsdB)
         {
@@ -536,13 +540,12 @@ public class MainActivity extends Activity{
             {
                 str += data.get(i);
             }
-            display.setText(str);
-            recognized = false;
+            bttnVoice.setBackgroundColor(Color.parseColor("#000000"));
         }
         public void onPartialResults(Bundle partialResults) {
             ArrayList data = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
             String word = (String) data.get(data.size() - 1);
-            if(!word.equals("") && recognized == false){
+            if(!word.equals("")){
                 compareText(word.toLowerCase());
             }
         }
