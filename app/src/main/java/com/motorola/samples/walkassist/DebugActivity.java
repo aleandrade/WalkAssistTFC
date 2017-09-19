@@ -178,7 +178,27 @@ public class DebugActivity extends Activity{
             }
         });
 
-        bttnVibration = (Button)findViewById(R.id.bttnVibration);
+        final CheckBox autoCollect = (CheckBox)findViewById(R.id.autoCollect);
+        autoCollect.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener(){
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+                if (isChecked){
+                    bttnADC.setEnabled(false);
+                    bttnADC.setBackgroundColor(0xFF222222);
+                    bttnADC.setTextColor(0xFF666666);
+                    personality.getRaw().executeRaw(RAW_CMD_ADC_ON);
+                } else {
+                    VibrationAssist.cancelVibration(getApplicationContext());
+                    bttnADC.setEnabled(true);
+                    bttnADC.setBackgroundColor(0xFF5CC0A0);
+                    bttnADC.setTextColor(0xFFFFFFFF);
+                    personality.getRaw().executeRaw(RAW_CMD_ADC_OFF);
+                }
+            }
+        });
+
+        final Button bttnVibration = (Button)findViewById(R.id.bttnVibration);
         bttnVibration.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -206,25 +226,6 @@ public class DebugActivity extends Activity{
                     Toast.LENGTH_LONG).show();
             return;
         }
-
-        CheckBox autoCollect = (CheckBox)findViewById(R.id.autoCollect);
-        autoCollect.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener(){
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked){
-                    bttnADC.setEnabled(false);
-                    bttnADC.setBackgroundColor(0xFF222222);
-                    bttnADC.setTextColor(0xFF666666);
-                    personality.getRaw().executeRaw(RAW_CMD_ADC_ON);
-                } else {
-                    VibrationAssist.cancelVibration(getApplicationContext());
-                    bttnADC.setEnabled(true);
-                    bttnADC.setBackgroundColor(0xFF5CC0A0);
-                    bttnADC.setTextColor(0xFFFFFFFF);
-                    personality.getRaw().executeRaw(RAW_CMD_ADC_OFF);
-                }
-            }
-        });
 
         /** Save currently temperature recording status */
         SharedPreferences preference = getSharedPreferences("recordingRaw", MODE_PRIVATE);
@@ -420,15 +421,13 @@ public class DebugActivity extends Activity{
     /** Got data from mod device RAW I/O */
     public void onRawData(byte[] buffer, int length) {
         if (length == 2){
-            byte[] bytes = { 0x00,0x00,buffer[1],buffer[0]};
-            ByteBuffer wrapped = ByteBuffer.wrap(bytes);
-            int integer = wrapped.getInt();
+            int integer = (buffer[0]&0xFF)+(buffer[1]&0xFF)*256;
             if(vibrate){
                 VibrationAssist.vibrateProximity(integer, getApplicationContext());
             } else {
                 VibrationAssist.cancelVibration(getApplicationContext());
             }
-            display.setText(Integer.toString(integer) + " cm");
+            display.setText(Integer.toString(integer));
         }
     }
 
@@ -494,7 +493,7 @@ public class DebugActivity extends Activity{
             speechRecognizer.stopListening();
             bttnVoice.setBackgroundColor(Color.parseColor("#000000"));
         } else if(speechRecognized.contains("modo auxílio")){
-            toggleVibration(TOGGLE_OFF);
+            VibrationAssist.cancelVibration(getApplicationContext());
             speechRecognizer.stopListening();
             startActivity(new Intent(this, BlindActivity.class));
         }
