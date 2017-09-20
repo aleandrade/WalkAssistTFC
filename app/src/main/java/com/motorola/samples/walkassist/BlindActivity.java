@@ -8,12 +8,16 @@ import android.os.Bundle;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
+import android.speech.tts.TextToSpeech;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Locale;
 
 /**
  * Created by andrade on 9/19/17.
@@ -22,6 +26,7 @@ import java.util.ArrayList;
 public class BlindActivity extends Activity {
     private static final int REQUEST_MICROPHONE = 2;
     private SpeechRecognizer speechRecognizer;
+    private TextToSpeech tts;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,6 +41,22 @@ public class BlindActivity extends Activity {
                     REQUEST_MICROPHONE);
 
         }
+
+        tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if (status == TextToSpeech.SUCCESS) {
+                    int result = tts.setLanguage(Locale.forLanguageTag("PT-BR"));
+                    if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        Toast.makeText(BlindActivity.this, "Language error", Toast.LENGTH_SHORT).show();
+                    }
+                    tts.speak("Bem vindo ao walk assist.", TextToSpeech.QUEUE_ADD, null, null);
+                    tts.speak("Os comandos possíveis são. ligar. e desligar vibração. trocar idioma. e mudar para modo desenvolvedor.", TextToSpeech.QUEUE_ADD, null, null);
+                    tts.speak("Toque na tela para falar", TextToSpeech.QUEUE_ADD, null, null);
+                } else {
+                    Toast.makeText(BlindActivity.this, "Initialization failed", Toast.LENGTH_SHORT).show();                }
+            }
+        });
 
         VibrationAssist.setPreviousValue(0);
 
@@ -86,6 +107,7 @@ public class BlindActivity extends Activity {
 
     class listener implements RecognitionListener
     {
+        Button bttn = (Button)findViewById(R.id.speech);
         public void onReadyForSpeech(Bundle params)
         {
         }
@@ -114,6 +136,13 @@ public class BlindActivity extends Activity {
             else if(error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY)            message = "recognizer busy";
             else if(error == SpeechRecognizer.ERROR_SERVER)                     message = "server";
             else if(error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT)             message = "speech timeout";
+
+            Toast.makeText(BlindActivity.this, message, Toast.LENGTH_SHORT).show();
+            tts.speak("Erro", TextToSpeech.QUEUE_ADD, null, null);
+            speechRecognizer.destroy();
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(getApplicationContext());
+            speechRecognizer.setRecognitionListener(new listener());
+            bttn.setBackgroundDrawable(getResources().getDrawable(R.drawable.speech_button));
         }
         public void onResults(Bundle results)
         {
@@ -123,7 +152,6 @@ public class BlindActivity extends Activity {
             {
                 str += data.get(i);
             }
-            Button bttn = (Button)findViewById(R.id.speech);
             bttn.setBackgroundDrawable(getResources().getDrawable(R.drawable.speech_button));
         }
         public void onPartialResults(Bundle partialResults) {

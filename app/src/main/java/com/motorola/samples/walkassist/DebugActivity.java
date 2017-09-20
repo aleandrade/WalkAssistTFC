@@ -43,6 +43,7 @@ import android.os.Message;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
+import android.speech.tts.TextToSpeech;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
@@ -58,6 +59,7 @@ import com.motorola.mod.ModManager;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Locale;
 
 import lecho.lib.hellocharts.model.Viewport;
 import lecho.lib.hellocharts.view.LineChartView;
@@ -93,6 +95,7 @@ public class DebugActivity extends Activity{
     Button bttnVibration;
     Button bttnVoice;
     private SpeechRecognizer speechRecognizer;
+    private TextToSpeech tts;
 
     public int TOGGLE_ON = 0;
     public int TOGGLE_OFF = 1;
@@ -141,6 +144,20 @@ public class DebugActivity extends Activity{
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if (status == TextToSpeech.SUCCESS) {
+                    int result = tts.setLanguage(Locale.forLanguageTag("PT-BR"));
+                    if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        Toast.makeText(DebugActivity.this, "Language error", Toast.LENGTH_SHORT).show();
+                    }
+                    tts.speak("Modo desenvolvedor. Para voltar, diga. modo. auxílio", TextToSpeech.QUEUE_ADD, null, null);
+                } else {
+                    Toast.makeText(DebugActivity.this, "Initialization failed", Toast.LENGTH_SHORT).show();                }
+            }
+        });
 
         VibrationAssist.setPreviousValue(0);
         display = (TextView) findViewById(R.id.display);
@@ -198,7 +215,7 @@ public class DebugActivity extends Activity{
             }
         });
 
-        final Button bttnVibration = (Button)findViewById(R.id.bttnVibration);
+        bttnVibration = (Button)findViewById(R.id.bttnVibration);
         bttnVibration.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -529,7 +546,14 @@ public class DebugActivity extends Activity{
             else if(error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY)            message = "recognizer busy";
             else if(error == SpeechRecognizer.ERROR_SERVER)                     message = "server";
             else if(error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT)             message = "speech timeout";
-            display.setText(message);
+
+            Toast.makeText(DebugActivity.this, message, Toast.LENGTH_SHORT).show();
+            tts.speak("Erro", TextToSpeech.QUEUE_ADD, null, null);
+
+            speechRecognizer.destroy();
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(getApplicationContext());
+            speechRecognizer.setRecognitionListener(new listener());
+            bttnVoice.setBackgroundColor(Color.parseColor("#000000"));
         }
         public void onResults(Bundle results)
         {
