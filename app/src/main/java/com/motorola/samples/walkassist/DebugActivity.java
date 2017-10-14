@@ -420,15 +420,38 @@ public class DebugActivity extends Activity{
 
     /** Got data from mod device RAW I/O */
     public void onRawData(byte[] buffer, int length) {
-        if (length == 2){
-            int integer = (buffer[0]&0xFF)+(buffer[1]&0xFF)*256;
+        String msg = "";
+        if (length >= 2){
+            int integer1 = (buffer[0]&0xFF)+(buffer[1]&0xFF)*256;
             if(vibrate){
-                VibrationAssist.vibrateProximity(integer, getApplicationContext());
+                VibrationAssist.vibrateProximity(integer1, getApplicationContext());
             } else {
                 VibrationAssist.cancelVibration(getApplicationContext());
             }
-            display.setText(Integer.toString(integer));
+            msg += Integer.toString(integer1) + " ";
+
         }
+        if (length >= 4){
+            int integer2 = (buffer[2]&0xFF)+(buffer[3]&0xFF)*256;
+            if(vibrate){
+                VibrationAssist.vibrateProximity(integer2, getApplicationContext());
+            } else {
+                VibrationAssist.cancelVibration(getApplicationContext());
+            }
+            msg += Integer.toString(integer2) + " ";
+
+        }
+        if (length == 6){
+            int integer3 = (buffer[4]&0xFF)+(buffer[5]&0xFF)*256;
+            if(vibrate){
+                VibrationAssist.vibrateProximity(integer3, getApplicationContext());
+            } else {
+                VibrationAssist.cancelVibration(getApplicationContext());
+            }
+            msg += Integer.toString(integer3) + " ";
+
+        }
+        display.setText(msg);
     }
 
     /** RAW I/O of attached mod device is ready to use */
