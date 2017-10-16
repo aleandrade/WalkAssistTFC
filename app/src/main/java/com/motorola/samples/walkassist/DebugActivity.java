@@ -31,18 +31,21 @@ package com.motorola.samples.walkassist;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
+import android.speech.tts.TextToSpeech;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
@@ -58,6 +61,7 @@ import com.motorola.mod.ModManager;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Locale;
 
 import lecho.lib.hellocharts.model.Viewport;
 import lecho.lib.hellocharts.view.LineChartView;
@@ -88,6 +92,9 @@ public class DebugActivity extends Activity{
     private static final int REQUEST_MICROPHONE = 2;
 
     private boolean vibrate = false;
+    private TextToSpeech tts;
+    String language;
+    int vibrationValue = 0;
 
     TextView display;
     Button bttnVibration;
@@ -142,10 +149,43 @@ public class DebugActivity extends Activity{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        Intent intent = getIntent();
+        final String lang = intent.getStringExtra("language");
+
+        tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if (status == TextToSpeech.SUCCESS) {
+                    if(lang == null){
+                        language = Locale.getDefault().getDisplayLanguage();
+                    } else {
+                        language = lang;
+                    }
+                    if(language.equals("português")) {
+                        int result = tts.setLanguage(Locale.forLanguageTag("PT-BR"));
+                        if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                            Toast.makeText(DebugActivity.this, "Language error", Toast.LENGTH_SHORT).show();
+                        }
+                        tts.speak("Modo desenvolvedor. Para voltar, diga. modo. auxílio", TextToSpeech.QUEUE_ADD, null, null);
+                    } else {
+                        int result = tts.setLanguage(Locale.forLanguageTag("en"));
+                        if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                            Toast.makeText(DebugActivity.this, "Language error", Toast.LENGTH_SHORT).show();
+                        }
+                        tts.speak("Developer mode. To go back, say accessibility. mode", TextToSpeech.QUEUE_ADD, null,
+                                null);
+                    }
+                } else {
+                    Toast.makeText(DebugActivity.this, "Initialization failed", Toast.LENGTH_SHORT).show();                }
+            }
+        });
+
         VibrationAssist.setPreviousValue(0);
         display = (TextView) findViewById(R.id.display);
 
         final Intent recognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        recognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en");
+        recognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "PT-BR");
         recognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         recognizerIntent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE,"voice.recognition.test");
         recognizerIntent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
@@ -160,6 +200,7 @@ public class DebugActivity extends Activity{
             @Override
             public void onClick(View v) {
                 Drawable background = bttnVoice.getBackground();
+                tts.shutdown();
                 if(((ColorDrawable)background).getColor() == Color.parseColor("#00ff00")){
                     speechRecognizer.stopListening();
                     bttnVoice.setBackgroundColor(Color.parseColor("#000000"));
@@ -173,8 +214,7 @@ public class DebugActivity extends Activity{
         bttnADC.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                byte[] CollectData = {0x05};
-                personality.getRaw().executeRaw(CollectData);
+                personality.getRaw().executeRaw(RAW_CMD_ADC_ON);
             }
         });
 
@@ -198,19 +238,19 @@ public class DebugActivity extends Activity{
             }
         });
 
-        final Button bttnVibration = (Button)findViewById(R.id.bttnVibration);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.VIBRATE) != PackageManager
+                .PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.VIBRATE},
+                    RC_VIBRATE);
+        }
+
+        bttnVibration = (Button)findViewById(R.id.bttnVibration);
         bttnVibration.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 toggleVibration(TOGGLE_ANY);
             }
         });
-
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.VIBRATE) != PackageManager
-                .PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.VIBRATE},
-                    RC_VIBRATE);
-        }
 
         if (personality == null || personality.getModDevice() == null) {
             Toast.makeText(DebugActivity.this, getString(R.string.sensor_not_available),
@@ -269,7 +309,6 @@ public class DebugActivity extends Activity{
             vibrate = true;
             bttnVibration.setText("Vibration ON");
             bttnVibration.setBackgroundColor(Color.parseColor("#5CC0A0"));
-            VibrationAssist.vibrateProximity(100, getApplicationContext());
         } else if(option != TOGGLE_ON){
             vibrate = false;
             bttnVibration.setText("Vibration OFF");
@@ -395,12 +434,23 @@ public class DebugActivity extends Activity{
                 } else {
                     tvSensor.setText(R.string.mdk_switch);
                 }
-            } else if(device.getVendorId() == 0x00000128) {
-                tvSensor.setText("\nMod adds a camera with optical zoom to the phone");
             } else {
                 tvSensor.setText(getString(R.string.attach_pcard));
             }
         }
+
+        IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        Intent batteryStatus = this.registerReceiver(null, ifilter);
+
+        int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+        int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+
+        float batteryPct = level / (float)scale;
+
+        TextView battery = (TextView) findViewById(R.id.battery);
+        battery.setText(batteryPct*100.0f + "%");
+
+
     }
 
     /** Check current mod whether in developer mode */
@@ -420,38 +470,43 @@ public class DebugActivity extends Activity{
 
     /** Got data from mod device RAW I/O */
     public void onRawData(byte[] buffer, int length) {
-        String msg = "";
+        TextView sensor1 = (TextView) findViewById(R.id.sensor_1);
+        TextView sensor2 = (TextView) findViewById(R.id.sensor_2);
+        TextView sensor3 = (TextView) findViewById(R.id.sensor_3);
+        int maxValue = 0;
+
         if (length >= 2){
             int integer1 = (buffer[0]&0xFF)+(buffer[1]&0xFF)*256;
-            if(vibrate){
-                VibrationAssist.vibrateProximity(integer1, getApplicationContext());
-            } else {
-                VibrationAssist.cancelVibration(getApplicationContext());
-            }
-            msg += Integer.toString(integer1) + " ";
+            sensor1.setText(Integer.toString(integer1));
 
+            maxValue = integer1;
         }
         if (length >= 4){
             int integer2 = (buffer[2]&0xFF)+(buffer[3]&0xFF)*256;
-            if(vibrate){
-                VibrationAssist.vibrateProximity(integer2, getApplicationContext());
-            } else {
-                VibrationAssist.cancelVibration(getApplicationContext());
-            }
-            msg += Integer.toString(integer2) + " ";
+            sensor2.setText(Integer.toString(integer2));
 
+            if(integer2 > maxValue){
+                maxValue = integer2;
+            }
         }
         if (length == 6){
             int integer3 = (buffer[4]&0xFF)+(buffer[5]&0xFF)*256;
-            if(vibrate){
-                VibrationAssist.vibrateProximity(integer3, getApplicationContext());
-            } else {
-                VibrationAssist.cancelVibration(getApplicationContext());
-            }
-            msg += Integer.toString(integer3) + " ";
+            sensor3.setText(Integer.toString(integer3));
 
+            if(integer3 > maxValue){
+                maxValue = integer3;
+            }
         }
-        display.setText(msg);
+
+        vibrationValue = maxValue;
+        bttnVibration = (Button)findViewById(R.id.bttnVibration);
+
+        String onOff = bttnVibration.getText().toString();
+        if(onOff.equals("Vibration ON")){
+            VibrationAssist.vibrateProximity(vibrationValue, getApplicationContext());
+        }
+
+        //display.setText(maxValue);
     }
 
     /** RAW I/O of attached mod device is ready to use */
@@ -518,7 +573,25 @@ public class DebugActivity extends Activity{
         } else if(speechRecognized.contains("modo auxílio")){
             VibrationAssist.cancelVibration(getApplicationContext());
             speechRecognizer.stopListening();
-            startActivity(new Intent(this, BlindActivity.class));
+            Intent blindIntent = new Intent(this, BlindActivity.class);
+            blindIntent.putExtra("language", language);
+            startActivity(blindIntent);
+        } else if (speechRecognized.contains("vibration")){
+            if(speechRecognized.contains("off")){
+                toggleVibration(TOGGLE_OFF);
+                speechRecognizer.stopListening();
+                bttnVoice.setBackgroundColor(Color.parseColor("#000000"));
+            } else if(speechRecognized.contains("on")){
+                toggleVibration(TOGGLE_ON);
+                speechRecognizer.stopListening();
+                bttnVoice.setBackgroundColor(Color.parseColor("#000000"));
+            }
+        } else if(speechRecognized.contains("accessibility") || speechRecognized.contains("mode")) {
+            VibrationAssist.cancelVibration(getApplicationContext());
+            speechRecognizer.stopListening();
+            Intent blindIntent = new Intent(this, BlindActivity.class);
+            blindIntent.putExtra("language", language);
+            startActivity(blindIntent);
         }
     }
 
@@ -552,7 +625,14 @@ public class DebugActivity extends Activity{
             else if(error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY)            message = "recognizer busy";
             else if(error == SpeechRecognizer.ERROR_SERVER)                     message = "server";
             else if(error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT)             message = "speech timeout";
-            display.setText(message);
+
+            Toast.makeText(DebugActivity.this, message, Toast.LENGTH_SHORT).show();
+            tts.speak("Erro", TextToSpeech.QUEUE_ADD, null, null);
+
+            speechRecognizer.destroy();
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(getApplicationContext());
+            speechRecognizer.setRecognitionListener(new listener());
+            bttnVoice.setBackgroundColor(Color.parseColor("#000000"));
         }
         public void onResults(Bundle results)
         {

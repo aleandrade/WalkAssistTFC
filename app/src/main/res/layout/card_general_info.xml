@@ -103,12 +103,6 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/text_vertical_margin"
-                        android:text="Sensor 4"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/text_vertical_margin"
                         android:text="Battery"/>
 
                     <TextView
@@ -145,14 +139,6 @@
 
                     <TextView
                         android:id="@+id/sensor_3"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/text_vertical_margin"
-                        android:text="@string/na"
-                        android:textStyle="bold"/>
-
-                    <TextView
-                        android:id="@+id/sensor_4"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/text_vertical_margin"
@@ -282,6 +268,13 @@
                 </LinearLayout>
 
             </LinearLayout>
+
+            <TextView
+                android:id="@+id/blank"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textStyle="bold"/>
 
             <TextView
                 android:id="@+id/mod_status"
