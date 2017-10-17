@@ -30,6 +30,7 @@ package com.motorola.samples.walkassist;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -42,6 +43,7 @@ import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.Vibrator;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -470,43 +472,35 @@ public class DebugActivity extends Activity{
 
     /** Got data from mod device RAW I/O */
     public void onRawData(byte[] buffer, int length) {
+        int integer1 = 0;
+        int integer2 = 0;
+        int integer3 = 0;
         TextView sensor1 = (TextView) findViewById(R.id.sensor_1);
         TextView sensor2 = (TextView) findViewById(R.id.sensor_2);
         TextView sensor3 = (TextView) findViewById(R.id.sensor_3);
-        int maxValue = 0;
+        String sensor = "nenhum";
 
         if (length >= 2){
-            int integer1 = (buffer[0]&0xFF)+(buffer[1]&0xFF)*256;
+            integer1 = (buffer[0]&0xFF)+(buffer[1]&0xFF)*256;
             sensor1.setText(Integer.toString(integer1));
-
-            maxValue = integer1;
         }
         if (length >= 4){
-            int integer2 = (buffer[2]&0xFF)+(buffer[3]&0xFF)*256;
+            integer2 = (buffer[2]&0xFF)+(buffer[3]&0xFF)*256;
             sensor2.setText(Integer.toString(integer2));
-
-            if(integer2 > maxValue){
-                maxValue = integer2;
-            }
         }
         if (length == 6){
-            int integer3 = (buffer[4]&0xFF)+(buffer[5]&0xFF)*256;
+            integer3 = (buffer[4]&0xFF)+(buffer[5]&0xFF)*256;
             sensor3.setText(Integer.toString(integer3));
-
-            if(integer3 > maxValue){
-                maxValue = integer3;
-            }
         }
 
-        vibrationValue = maxValue;
         bttnVibration = (Button)findViewById(R.id.bttnVibration);
 
         String onOff = bttnVibration.getText().toString();
         if(onOff.equals("Vibration ON")){
-            VibrationAssist.vibrateProximity(vibrationValue, getApplicationContext());
+            VibrationAssist.vibrateProximity(integer1, integer2, integer3, tts, getApplicationContext());
         }
 
-        //display.setText(maxValue);
+        display.setText(Integer.toString(integer2));
     }
 
     /** RAW I/O of attached mod device is ready to use */
@@ -565,11 +559,24 @@ public class DebugActivity extends Activity{
         if(!speechRecognized.contains("desligar") && speechRecognized.contains("ligar vibração") || speechRecognized.contains("liga vibração")){
             toggleVibration(TOGGLE_ON);
             speechRecognizer.stopListening();
+            personality.getRaw().executeRaw(RAW_CMD_ADC_ON);
             bttnVoice.setBackgroundColor(Color.parseColor("#000000"));
+            tts.speak("Ligado.", TextToSpeech.QUEUE_ADD, null, null);
         } else if(speechRecognized.contains("desligar vibração") || speechRecognized.contains("desliga vibração")){
             toggleVibration(TOGGLE_OFF);
             speechRecognizer.stopListening();
             bttnVoice.setBackgroundColor(Color.parseColor("#000000"));
+            tts.speak("Desligado.", TextToSpeech.QUEUE_ADD, null, null);
+        }  else if(!speechRecognized.contains("desligar") && speechRecognized.contains("ligar auxílio") || speechRecognized.contains("liga vibração")){
+            speechRecognizer.stopListening();
+            toggleVibration(TOGGLE_ON);
+            personality.getRaw().executeRaw(RAW_CMD_ADC_ON);
+            tts.speak("Ligado.", TextToSpeech.QUEUE_ADD, null, null);
+        } else if(speechRecognized.contains("desligar auxílio") || speechRecognized.contains("desliga auxílio")){
+            VibrationAssist.cancelVibration(getApplicationContext());
+            speechRecognizer.stopListening();
+            toggleVibration(TOGGLE_OFF);
+            tts.speak("Desligado.", TextToSpeech.QUEUE_ADD, null, null);
         } else if(speechRecognized.contains("modo auxílio")){
             VibrationAssist.cancelVibration(getApplicationContext());
             speechRecognizer.stopListening();

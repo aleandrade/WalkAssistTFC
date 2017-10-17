@@ -2,48 +2,60 @@ package com.motorola.samples.walkassist;
 
 import android.content.Context;
 import android.os.Vibrator;
+import android.speech.tts.TextToSpeech;
+import android.widget.Toast;
+
+import java.util.Locale;
 
 /**
  * Created by andrade on 8/21/17.
  */
 
 public final class VibrationAssist {
-    private static int mPreviousValue = 0;
+    private static double relativePreviousValue = 0;
+    private static double lPreviousValue = 0;
+    private static double rPreviousValue = 0;
+
 
     public static void setPreviousValue (int previousValue){
-        mPreviousValue = previousValue;
+        relativePreviousValue = previousValue;
     }
 
-    public static void vibrateProximity(int proximity, Context context){
-        proximity *= 10;
+    public static void vibrateProximity(int proximityL, int proximityM, int proximityR, TextToSpeech tts, final Context context){
+        double value = (double) proximityM / 4095;
         Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
-        if(mPreviousValue < 2500) {
-            if (Math.abs(proximity - mPreviousValue) > 100) {
-                if (proximity < 4000) {
-                    vibrator.vibrate(new long[]{0, 150, (long) proximity*7/10, 150}, 2);
 
-                } else {
-                    vibrator.cancel();
-                }
-            }
+        if(proximityM > 700){
+          if(Math.abs(value - relativePreviousValue) > 0.05 || relativePreviousValue < 0.1) {
+              if(value < 0.55) {
+                  double result = (double) (1 - value) * 1000;
+                  vibrator.vibrate(new long[]{0, 150, (long) result, 150}, 2);
+
+              } else {
+                  double result = (double) (1.01 - value) * 400;
+                  vibrator.vibrate(new long[]{0, 150, (long) result, 150}, 2);
+              }
+          }
         } else {
-            if (Math.abs(proximity - mPreviousValue) > 500) {
-                if (proximity < 4000) {
-                    vibrator.vibrate(new long[]{0, 150, (long) proximity*7/10, 150}, 2);
-
-                } else {
-                    vibrator.cancel();
-                }
-            }
-            mPreviousValue = proximity;
+            vibrator.cancel();
         }
-        mPreviousValue = proximity;
+
+        if(proximityR>1200 && Math.abs(rPreviousValue - proximityR) > 400){
+            tts.speak("Direita obstáculo", TextToSpeech.QUEUE_FLUSH, null, null);
+        }
+        if(proximityL>1200 && Math.abs(lPreviousValue - proximityL) > 400) {
+            tts.speak("Esquerda obstáculo", TextToSpeech.QUEUE_FLUSH, null, null);
+        }
+
+        relativePreviousValue = value;
+        lPreviousValue = proximityL;
+        rPreviousValue = proximityR;
     }
 
     public static void cancelVibration(Context context){
         Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
         vibrator.cancel();
-        mPreviousValue = 0;
+        relativePreviousValue = 0;
     }
 
 }
