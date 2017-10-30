@@ -160,15 +160,32 @@ public class BlindActivity extends Activity {
             }
         });
 
-        if (personality == null || personality.getModDevice() == null) {
-            Toast.makeText(BlindActivity.this, getString(R.string.sensor_not_available),
-                    Toast.LENGTH_SHORT).show();
-            return;
-        }
+//        if (personality == null || personality.getModDevice() == null) {
+//            Toast.makeText(BlindActivity.this, getString(R.string.sensor_not_available),
+//                    Toast.LENGTH_SHORT).show();
+//            return;
+//        }
 
         if(personality != null){
             personality.getRaw().executeRaw(RAW_CMD_ADC_ON);
         }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        /** Initial MDK Personality interface */
+        initPersonality();
+        personality.getRaw().executeRaw(RAW_CMD_ADC_ON);
+
+
+        /** Restore temperature record status */
+        /*Switch switcher = (Switch) findViewById(R.id.sensor_switch);
+        if (switcher != null) {
+            SharedPreferences preference = getSharedPreferences("recordingRaw", MODE_PRIVATE);
+            switcher.setChecked(preference.getBoolean("recordingRaw", false));
+        }*/
     }
 
     public void compareText(String speechRecognized){
@@ -178,7 +195,6 @@ public class BlindActivity extends Activity {
             bttn.setBackgroundDrawable(getResources().getDrawable(R.drawable.speech_button));
             vibrationON = true;
             speechRecognizer.stopListening();
-            tts.speak("Ligado.", TextToSpeech.QUEUE_ADD, null, null);
         } else if(speechRecognized.contains("desligar vibração") || speechRecognized.contains("desliga vibração")){
             VibrationAssist.cancelVibration(getApplicationContext());
             vibrationON = false;
@@ -198,7 +214,9 @@ public class BlindActivity extends Activity {
             tts.speak("Desligado.", TextToSpeech.QUEUE_ADD, null, null);
         } else if(speechRecognized.contains("modo desenvolvedor")){
             speechRecognizer.stopListening();
+            vibrationON = false;
             VibrationAssist.cancelVibration(getApplicationContext());
+            releasePersonality();
             Intent developerIntent = new Intent(this, DebugActivity.class);
             developerIntent.putExtra("language", language);
             startActivity(developerIntent);
@@ -213,7 +231,9 @@ public class BlindActivity extends Activity {
             }
         } else if(speechRecognized.contains("developer mode")) {
             speechRecognizer.stopListening();
+            vibrationON = false;
             VibrationAssist.cancelVibration(getApplicationContext());
+            releasePersonality();
             Intent developerIntent = new Intent(this, DebugActivity.class);
             developerIntent.putExtra("language", language);
             startActivity(developerIntent);
@@ -294,22 +314,18 @@ public class BlindActivity extends Activity {
         int integer1 = 0;
         int integer2 = 0;
         int integer3 = 0;
-        TextView sensor1 = (TextView) findViewById(R.id.sensor_1);
-        TextView sensor2 = (TextView) findViewById(R.id.sensor_2);
-        TextView sensor3 = (TextView) findViewById(R.id.sensor_3);
+        TextView text = (TextView) findViewById(R.id.textView);
         String sensor = "nenhum";
 
         if (length >= 2){
             integer1 = (buffer[0]&0xFF)+(buffer[1]&0xFF)*256;
-            sensor1.setText(Integer.toString(integer1));
         }
         if (length >= 4){
             integer2 = (buffer[2]&0xFF)+(buffer[3]&0xFF)*256;
-            sensor2.setText(Integer.toString(integer2));
+            text.setText(Integer.toString(integer2));
         }
         if (length == 6){
             integer3 = (buffer[4]&0xFF)+(buffer[5]&0xFF)*256;
-            sensor3.setText(Integer.toString(integer3));
         }
 
         if(vibrationON){
@@ -383,6 +399,7 @@ public class BlindActivity extends Activity {
             else if (error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) message = "speech timeout";
 
             Toast.makeText(BlindActivity.this, message, Toast.LENGTH_SHORT).show();
+            speechRecognizer.cancel();
             speechRecognizer.destroy();
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(getApplicationContext());
             speechRecognizer.setRecognitionListener(new listener());

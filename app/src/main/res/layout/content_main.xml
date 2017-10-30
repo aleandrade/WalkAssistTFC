@@ -53,7 +53,7 @@
             <Button
                 android:id="@+id/bttnVoice"
                 android:layout_width="match_parent"
-                android:layout_height="593dp"
+                android:layout_height="66dp"
                 android:background="#000000"
                 android:text="VOICE"
                 android:textColor="#FFFFFF"/>

@@ -151,6 +151,8 @@ public class DebugActivity extends Activity{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+
+
         Intent intent = getIntent();
         final String lang = intent.getStringExtra("language");
 
@@ -254,21 +256,6 @@ public class DebugActivity extends Activity{
             }
         });
 
-        if (personality == null || personality.getModDevice() == null) {
-            Toast.makeText(DebugActivity.this, getString(R.string.sensor_not_available),
-                    Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // PID_WALKASSIST, VER NUMERO!!!!!!!!!1111ONZE!!!!
-        if (personality.getModDevice().getVendorId() != Constants.VID_DEVELOPER
-                && !(personality.getModDevice().getVendorId() == Constants.VID_MDK
-                && personality.getModDevice().getProductId() == Constants.PID_WALKASSIST)) {
-            Toast.makeText(DebugActivity.this, getString(R.string.sensor_not_available),
-                    Toast.LENGTH_LONG).show();
-            return;
-        }
-
         /** Save currently temperature recording status */
         SharedPreferences preference = getSharedPreferences("recordingRaw", MODE_PRIVATE);
         //preference.edit().putBoolean("recordingRaw", ).commit();
@@ -291,6 +278,8 @@ public class DebugActivity extends Activity{
 
         /** Initial MDK Personality interface */
         initPersonality();
+
+        personality.getRaw().executeRaw(RAW_CMD_ADC_ON);
 
         /** Restore temperature record status */
         /*Switch switcher = (Switch) findViewById(R.id.sensor_switch);
