@@ -32,6 +32,7 @@ import java.util.Locale;
 
 public class BlindActivity extends Activity {
     private static final int REQUEST_MICROPHONE = 2;
+    private static final int RC_VIBRATE = 1;
     private static final int RAW_PERMISSION_REQUEST_CODE = 100;
     private SpeechRecognizer speechRecognizer;
     private TextToSpeech tts;
@@ -129,6 +130,12 @@ public class BlindActivity extends Activity {
 
         }
 
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.VIBRATE) != PackageManager
+                .PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.VIBRATE},
+                    RC_VIBRATE);
+        }
+
         VibrationAssist.setPreviousValue(0);
 
         final Intent recognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
@@ -147,7 +154,7 @@ public class BlindActivity extends Activity {
         bttnSpeech.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                tts.shutdown();
+                tts.stop();
                 if(bttnSpeech.getText().equals("r")){
                     bttnSpeech.setText("l");
                     bttnSpeech.setBackgroundDrawable(getResources().getDrawable(R.drawable.speech_button_green));
@@ -179,13 +186,20 @@ public class BlindActivity extends Activity {
         initPersonality();
         personality.getRaw().executeRaw(RAW_CMD_ADC_ON);
 
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
+        speechRecognizer.setRecognitionListener(new listener());
+    }
 
-        /** Restore temperature record status */
-        /*Switch switcher = (Switch) findViewById(R.id.sensor_switch);
-        if (switcher != null) {
-            SharedPreferences preference = getSharedPreferences("recordingRaw", MODE_PRIVATE);
-            switcher.setChecked(preference.getBoolean("recordingRaw", false));
-        }*/
+    @Override
+    public void onPause() {
+        speechRecognizer.destroy();
+        if(speechRecognizer!=null){
+            speechRecognizer.stopListening();
+            speechRecognizer.cancel();
+            speechRecognizer.destroy();
+        }
+        speechRecognizer = null;
+        super.onPause();
     }
 
     public void compareText(String speechRecognized){
@@ -219,6 +233,7 @@ public class BlindActivity extends Activity {
             releasePersonality();
             Intent developerIntent = new Intent(this, DebugActivity.class);
             developerIntent.putExtra("language", language);
+            bttn.setBackgroundDrawable(getResources().getDrawable(R.drawable.speech_button));
             startActivity(developerIntent);
         } else if (speechRecognized.contains("vibration")){
             if(speechRecognized.contains("off")){
@@ -236,6 +251,7 @@ public class BlindActivity extends Activity {
             releasePersonality();
             Intent developerIntent = new Intent(this, DebugActivity.class);
             developerIntent.putExtra("language", language);
+            bttn.setBackgroundDrawable(getResources().getDrawable(R.drawable.speech_button));
             startActivity(developerIntent);
         } else if(speechRecognized.contains("language")) {
             speechRecognizer.stopListening();
@@ -370,7 +386,6 @@ public class BlindActivity extends Activity {
             if (error == SpeechRecognizer.ERROR_AUDIO) message = "audio";
             else if (error == SpeechRecognizer.ERROR_CLIENT) {
                 message = "client";
-                tts.speak("Erro. Tente novamente", TextToSpeech.QUEUE_ADD, null, null);
             } else if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
                 message = "insufficient permissions";
                 tts.speak("Erro nas permissões", TextToSpeech.QUEUE_ADD, null, null);
@@ -386,6 +401,10 @@ public class BlindActivity extends Activity {
             else if (error == SpeechRecognizer.ERROR_NO_MATCH){
                 message = "No match found";
                 Toast.makeText(BlindActivity.this, message, Toast.LENGTH_SHORT).show();
+                speechRecognizer.stopListening();
+                Button bttn = (Button)findViewById(R.id.speech);
+                bttn.setBackgroundDrawable(getResources().getDrawable(R.drawable.speech_button));
+                tts.speak("Comando não encontrado", TextToSpeech.QUEUE_ADD, null, null);
                 return;
             }
             else if (error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY){
@@ -400,9 +419,6 @@ public class BlindActivity extends Activity {
 
             Toast.makeText(BlindActivity.this, message, Toast.LENGTH_SHORT).show();
             speechRecognizer.cancel();
-            speechRecognizer.destroy();
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(getApplicationContext());
-            speechRecognizer.setRecognitionListener(new listener());
             Button bttn = (Button)findViewById(R.id.speech);
             bttn.setBackgroundDrawable(getResources().getDrawable(R.drawable.speech_button));
         }
@@ -416,6 +432,8 @@ public class BlindActivity extends Activity {
             }
             Button bttn = (Button)findViewById(R.id.speech);
             bttn.setBackgroundDrawable(getResources().getDrawable(R.drawable.speech_button));
+            speechRecognizer.stopListening();
+            speechRecognizer.cancel();
         }
         public void onPartialResults(Bundle partialResults) {
             ArrayList data = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);

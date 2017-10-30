@@ -151,8 +151,6 @@ public class DebugActivity extends Activity{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
-
         Intent intent = getIntent();
         final String lang = intent.getStringExtra("language");
 
@@ -204,7 +202,7 @@ public class DebugActivity extends Activity{
             @Override
             public void onClick(View v) {
                 Drawable background = bttnVoice.getBackground();
-                tts.shutdown();
+                tts.stop();
                 if(((ColorDrawable)background).getColor() == Color.parseColor("#00ff00")){
                     speechRecognizer.stopListening();
                     bttnVoice.setBackgroundColor(Color.parseColor("#000000"));
@@ -247,6 +245,16 @@ public class DebugActivity extends Activity{
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.VIBRATE},
                     RC_VIBRATE);
         }
+
+        if (ContextCompat.checkSelfPermission(getApplicationContext(),
+                Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.RECORD_AUDIO},
+                    REQUEST_MICROPHONE);
+
+        }
+
 
         bttnVibration = (Button)findViewById(R.id.bttnVibration);
         bttnVibration.setOnClickListener(new View.OnClickListener() {
@@ -567,11 +575,11 @@ public class DebugActivity extends Activity{
             toggleVibration(TOGGLE_OFF);
             tts.speak("Desligado.", TextToSpeech.QUEUE_ADD, null, null);
         } else if(speechRecognized.contains("modo auxílio")){
-            VibrationAssist.cancelVibration(getApplicationContext());
             speechRecognizer.stopListening();
-            Intent blindIntent = new Intent(this, BlindActivity.class);
-            blindIntent.putExtra("language", language);
-            startActivity(blindIntent);
+            VibrationAssist.cancelVibration(getApplicationContext());
+            releasePersonality();
+            tts.speak("Modo auxílio.", TextToSpeech.QUEUE_ADD, null, null);
+            this.finish();
         } else if (speechRecognized.contains("vibration")){
             if(speechRecognized.contains("off")){
                 toggleVibration(TOGGLE_OFF);
@@ -583,11 +591,10 @@ public class DebugActivity extends Activity{
                 bttnVoice.setBackgroundColor(Color.parseColor("#000000"));
             }
         } else if(speechRecognized.contains("accessibility") || speechRecognized.contains("mode")) {
-            VibrationAssist.cancelVibration(getApplicationContext());
             speechRecognizer.stopListening();
-            Intent blindIntent = new Intent(this, BlindActivity.class);
-            blindIntent.putExtra("language", language);
-            startActivity(blindIntent);
+            VibrationAssist.cancelVibration(getApplicationContext());
+            releasePersonality();
+            this.finish();
         }
     }
 
@@ -623,11 +630,8 @@ public class DebugActivity extends Activity{
             else if(error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT)             message = "speech timeout";
 
             Toast.makeText(DebugActivity.this, message, Toast.LENGTH_SHORT).show();
-            tts.speak("Erro", TextToSpeech.QUEUE_ADD, null, null);
 
-            speechRecognizer.destroy();
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(getApplicationContext());
-            speechRecognizer.setRecognitionListener(new listener());
+            speechRecognizer.cancel();
             bttnVoice.setBackgroundColor(Color.parseColor("#000000"));
         }
         public void onResults(Bundle results)
