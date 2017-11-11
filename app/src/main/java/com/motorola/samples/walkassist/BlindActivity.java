@@ -49,36 +49,36 @@ public class BlindActivity extends Activity {
     public static byte[] RAW_CMD_ADC_OFF = {0x00,0x00,0x00};
     public static byte[] RAW_CMD_ADC_ON = {0x00,0x00,0x01};
 
-    /** Handler for events from mod device */
-    private Handler handler = new Handler() {
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case Personality.MSG_MOD_DEVICE:
-                    /** Mod attach/detach */
-                    ModDevice device = personality.getModDevice();
-                    break;
-                case Personality.MSG_RAW_DATA:
-                    /** Mod raw data */
-                    byte[] buff = (byte[]) msg.obj;
-                    int length = msg.arg1;
-                    onRawData(buff, length);
-                    break;
-                case Personality.MSG_RAW_IO_READY:
-                    /** Mod RAW I/O ready to use */
-                    onRawInterfaceReady();
-                    break;
-                case Personality.MSG_RAW_IO_EXCEPTION:
-                    /** Mod RAW I/O exception */
-                    break;
-                case Personality.MSG_RAW_REQUEST_PERMISSION:
-                    /** Request grant RAW_PROTOCOL permission */
-                    onRequestRawPermission();
-                default:
-                    Log.i(Constants.TAG, "DebugActivity - Un-handle events: " + msg.what);
-                    break;
-            }
+/** Handler for events from mod device */
+private Handler handler = new Handler() {
+    public void handleMessage(Message msg) {
+        switch (msg.what) {
+            case Personality.MSG_MOD_DEVICE:
+                /** Mod attach/detach */
+                ModDevice device = personality.getModDevice();
+                break;
+            case Personality.MSG_RAW_DATA:
+                /** Mod raw data */
+                byte[] buff = (byte[]) msg.obj;
+                int length = msg.arg1;
+                onRawData(buff, length);
+                break;
+            case Personality.MSG_RAW_IO_READY:
+                /** Mod RAW I/O ready to use */
+                onRawInterfaceReady();
+                break;
+            case Personality.MSG_RAW_IO_EXCEPTION:
+                /** Mod RAW I/O exception */
+                break;
+            case Personality.MSG_RAW_REQUEST_PERMISSION:
+                /** Request grant RAW_PROTOCOL permission */
+                onRequestRawPermission();
+            default:
+                Log.i(Constants.TAG, "DebugActivity - Un-handle events: " + msg.what);
+                break;
         }
-    };
+    }
+};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,15 +99,18 @@ public class BlindActivity extends Activity {
                     }
                     if(language.equals("português")) {
                         int result = tts.setLanguage(Locale.forLanguageTag("PT-BR"));
-                        if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        if (result == TextToSpeech.LANG_MISSING_DATA ||
+                                result == TextToSpeech.LANG_NOT_SUPPORTED) {
                             Toast.makeText(BlindActivity.this, "Language error", Toast.LENGTH_SHORT).show();
                         }
                         tts.speak("Bem vindo ao walk assist.", TextToSpeech.QUEUE_ADD, null, null);
-                        tts.speak("Os comandos possíveis são. ligar. e desligar auxílio. trocar idioma. e mudar para modo desenvolvedor.", TextToSpeech.QUEUE_ADD, null, null);
+                        tts.speak("Os comandos possíveis são. ligar. e desligar auxílio. trocar idioma" +
+                                ". e mudar para modo desenvolvedor.", TextToSpeech.QUEUE_ADD, null, null);
                         tts.speak("Toque na tela para falar", TextToSpeech.QUEUE_ADD, null, null);
                     } else {
                         int result = tts.setLanguage(Locale.forLanguageTag("en"));
-                        if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        if (result == TextToSpeech.LANG_MISSING_DATA ||
+                                result == TextToSpeech.LANG_NOT_SUPPORTED) {
                             Toast.makeText(BlindActivity.this, "Language error", Toast.LENGTH_SHORT).show();
                         }
                         tts.speak("Welcome to Walk Assist", TextToSpeech.QUEUE_ADD, null, null);

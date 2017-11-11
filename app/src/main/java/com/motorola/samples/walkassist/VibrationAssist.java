@@ -40,11 +40,18 @@ public final class VibrationAssist {
             vibrator.cancel();
         }
 
-        if(proximityR>1200 && Math.abs(rPreviousValue - proximityR) > 400){
-            tts.speak("Direita obstáculo", TextToSpeech.QUEUE_FLUSH, null, null);
-        }
-        if(proximityL>1200 && Math.abs(lPreviousValue - proximityL) > 400) {
-            tts.speak("Esquerda obstáculo", TextToSpeech.QUEUE_FLUSH, null, null);
+        if(proximityR>2000 && proximityL>2000 && Math.abs(rPreviousValue - proximityR) > 400) {
+            if(!tts.isSpeaking()){
+                tts.speak("Dois lados obstáculo", TextToSpeech.QUEUE_FLUSH, null, null);
+            }
+        } else if(proximityR>2000 && Math.abs(rPreviousValue - proximityR) > 400){
+            if(!tts.isSpeaking()){
+                tts.speak("Direita obstáculo", TextToSpeech.QUEUE_FLUSH, null, null);
+            }
+        } else if(proximityL>2000 && Math.abs(lPreviousValue - proximityL) > 400) {
+            if(!tts.isSpeaking()) {
+                tts.speak("Esquerda obstáculo", TextToSpeech.QUEUE_FLUSH, null, null);
+            }
         }
 
         relativePreviousValue = value;
